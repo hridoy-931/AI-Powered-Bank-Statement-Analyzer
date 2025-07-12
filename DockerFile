@@ -1,0 +1,32 @@
+# Start with a base image that supports GPU for PyTorch 2.5.1
+FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04
+
+# Set the working folder inside the container
+WORKDIR /app
+
+# Set some settings for smooth operation
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV GUNICORN_CMD_ARGS="--workers=3 --timeout=120"
+
+# Install system tools (like Tesseract for OCR, Poppler for PDFs, and Python 3.12)
+RUN apt-get update && apt-get install -y \
+    python3.12 \
+    python3.12-dev \
+    python3-pip \
+    tesseract-ocr \
+    poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python libraries
+COPY requirements.txt .
+RUN pip3 install --no-cache-dir -r requirements.txt
+
+# Copy your app code into the container
+COPY . .
+
+# Tell Docker to use port 8080
+EXPOSE 8080
+
+# Start the app with a web server called Gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]
